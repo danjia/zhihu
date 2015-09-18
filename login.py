@@ -1,16 +1,22 @@
 # -*- coding: utf8 -*-
-import urllib
-import urllib2
 import random
 import re
 import time
-import cookielib
+import requests
+
+#session请求
+sessionRequests = requests.Session()
 
 
-def requestUrl(url, form=None):
+'''
+@beif
+@params data 要传的参数
+'''
+def requestUrl(url, data=None):
+    global sessionRequests
     #Get
-    if None == form:
-        req = urllib2.Request(url)
+    if None == data:
+        response = sessionRequests.get(url)
     #Post
     else:
         headers = {
@@ -22,28 +28,25 @@ def requestUrl(url, form=None):
             'Referer': "http://www.zhihu.com/",
             'X-Requested-With': "XMLHttpRequest"
         }
-        req = urllib2.Request(url, urllib.urlencode(form), headers)
-    
-    response = urllib2.urlopen(req)
-    #TODO:处理返回错误
-    data = response.read()
-    return data
+        response = sessionRequests.post(url, data=data, headers=headers)
+    #print response.status_code
+    #print response.headers
+    #print response.cookies
 
+    return response.content
 
+'''
+    保存数据到文件里面
+'''
 def saveDataToFile(strData, path, fileName):
+    
     f = open(path+'/'+fileName, "wb")
     f.write(strData)
     f.close()
 
-def requestGet(url):
-    req = urllib2.Request(url)
-    response = urllib2.urlopen(req)
-    data = response.read()
-    global g_cookie
-    g_cookie.save()
-    return data
-
-
+'''
+@brief 获取验证码,保存到当前文件夹里面
+'''
 def getCaptcha():
     captcha_url = 'http://www.zhihu.com/captcha.gif?r='+str(long(time.time()*1000))
     data = requestUrl(captcha_url)
@@ -53,6 +56,9 @@ def getCaptcha():
     captcha = raw_input("captcha:")
     return captcha
 
+'''
+@brief 获取_xsrf
+'''
 def getXsrf():
     url = "http://www.zhihu.com/#signin"
     #url = "http://www.zhihu.com/"
@@ -61,20 +67,22 @@ def getXsrf():
     result = pattern_xsrf.findall(data)
     return result[0]
 
-
+'''
+'''
 def setSession():
     #url = "http://www.zhihu.com/settings/profile"
     url = "http://www.zhihu.com/settings/account"
+    requestUrl(url)
 
-    cj = cookielib.LWPCookieJar()
-    cookie_support = urllib2.HTTPCookieProcessor(cj)
-    opener = urllib2.build_opener(cookie_support, urllib2.HTTPHandler)
-    urllib2.install_opener(opener)
-
-    
-    req = urllib2.Request(url)
-    response = urllib2.urlopen(req)
-
+'''
+@brief 获取某个问题
+@params questionNumber 问题的编号
+'''
+def getQuestionMsg(questionNumber):
+    print("get question msg...")
+    question_url = "http://www.zhihu.com/question/"+str(questionNumber)
+    data = requestUrl(question_url)
+    saveDataToFile(data, ".", "question"+str(questionNumber)+'.html')
 
 def login(account, password, remember_me):
     setSession()
@@ -93,8 +101,11 @@ def login(account, password, remember_me):
     login_url = "http://www.zhihu.com/login/email"
     data = requestUrl(login_url, form)
     print(data)
+    
 
 
 if "__main__" == __name__:
     login("email@qq.com", "password", "true")
+    #getQuestionMsg(34580301)
     #login()
+
